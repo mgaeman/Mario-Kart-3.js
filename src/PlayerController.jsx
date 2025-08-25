@@ -1,6 +1,6 @@
 import { Kart } from "./models/Kart";
 import { useKeyboardControls } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useRef } from "react";
 import { Vector3 } from "three";
 import { damp } from "three/src/math/MathUtils.js";
@@ -9,6 +9,7 @@ import { useGameStore } from "./store";
 import gsap from "gsap";
 import { useTouchScreen } from "./hooks/useTouchScreen";
 import VFXEmitter from "./wawa-vfx/VFXEmitter";
+import { checkBoundaryCollision, calculateBounceResponse } from "./utils/collisionDetection";
 
 export const PlayerController = () => {
   const rbRef = useRef(null);
@@ -189,6 +190,9 @@ export const PlayerController = () => {
     }
   }
 
+  const { scene } = useThree();
+  const collisionCooldown = useRef(0);
+  
   function updatePlayer(player, speed, camera, kart, delta) {
     const desiredDirection = new Vector3(
       -Math.sin(player.rotation.y),
@@ -217,12 +221,35 @@ export const PlayerController = () => {
       8 * delta
     );
 
-    // const body = useGameStore.getState().body;
-    // if(body){
-    //   cameraGroupRef.current.position.y = lerp(cameraGroupRef.current.position.y, body.position.y + 2, 8 * delta);
-    //   cameraLookAtRef.current.position.y = body.position.y;
-    // }
+    if (collisionCooldown.current > 0) {
+      collisionCooldown.current -= delta;
+    }
+
     const direction = smoothedDirectionRef.current;
+    
+    const velocity = new Vector3(
+      direction.x * speed,
+      0,
+      direction.z * speed
+    );
+    
+    if (jumpOffset.current === 0 && speed > 1.0 && collisionCooldown.current <= 0) {
+      const collision = checkBoundaryCollision(player.position, velocity, scene, 2.0);
+      
+      if (collision) {
+        const bounceResponse = calculateBounceResponse(
+          collision.point,
+          collision.normal,
+          velocity,
+          0.8
+        );
+        
+        smoothedDirectionRef.current.copy(bounceResponse.direction);
+        speedRef.current = bounceResponse.force * 0.7;
+        
+        collisionCooldown.current = 0.5;
+      }
+    }
 
     player.position.x += direction.x * speed * delta;
     player.position.z += direction.z * speed * delta;
