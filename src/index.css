@@ -210,3 +210,31 @@ canvas{
     transform: translateY(-5px) skewX(-6deg);
   }
 }
+
+.game-header {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 20px;
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
+}
+
+.game-title {
+  font-family: "mario_kart_f2", "DIN 2014", sans-serif;
+  font-size: 24px;
+  color: #FFE600;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.ey-logo {
+  height: 30px;
+  width: auto;
+}
