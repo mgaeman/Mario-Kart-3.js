@@ -16,6 +16,7 @@ import { KartDust } from "./KartDust.jsx";
 import { Sparks } from "../particles/sparks/Sparks.jsx";
 import { Skate } from "../particles/drift/Skate/Skate.jsx";
 import { Trails } from "../particles/sparks/Trails.jsx";
+import { checkBoundaryCollision, calculateBounceResponse } from "../utils/collisionDetection.js";
 const raycaster = new Raycaster();
 
 export function Kart({
@@ -192,6 +193,10 @@ export function Kart({
 
     bodyRef.current.position.y = averageYPos + jumpOffset.current * 0.1;
   }
+  const lastValidPosition = useRef(new Vector3());
+  const kartVelocity = useRef(new Vector3());
+  const collisionCooldown = useRef(0);
+  
   useFrame((_, delta) => {
     if (wheel0.current && wheel1.current && wheel2.current && wheel3.current) {
       if (groundMeshes.current.length < 2) {
@@ -210,6 +215,42 @@ export function Kart({
 
       rotateWheels(left, right, delta);
 
+      const kartDirection = new Vector3(
+        -Math.sin(bodyRef.current.rotation.y),
+        0,
+        -Math.cos(bodyRef.current.rotation.y)
+      );
+      kartVelocity.current.set(
+        kartDirection.x * speed.current,
+        0,
+        kartDirection.z * speed.current
+      );
+      
+      const kartPosition = bodyRef.current.getWorldPosition(new Vector3());
+      
+      if (jumpOffset.current === 0 && speed.current > 1.0 && collisionCooldown.current <= 0) {
+        const collision = checkBoundaryCollision(kartPosition, kartVelocity.current, scene, 2.0);
+        
+        if (collision) {
+          const bounceResponse = calculateBounceResponse(
+            collision.point,
+            collision.normal,
+            kartVelocity.current,
+            0.8
+          );
+          
+          speed.current = bounceResponse.force * 0.7; // Reduce speed on collision
+          
+          collisionCooldown.current = 0.5;
+        }
+      }
+      
+      if (collisionCooldown.current > 0) {
+        collisionCooldown.current -= delta;
+      }
+      
+      lastValidPosition.current.copy(kartPosition);
+      
       getGroundPosition(wheel0Base, wheel0, backWheelOffset.current.right, 0, delta);
       getGroundPosition(wheel1Base, wheel1, backWheelOffset.current.left, 1, delta);
       getGroundPosition(wheel2Base, wheel2, backWheelOffset.current.right, 2, delta);
