@@ -18,11 +18,22 @@ export function checkBoundaryCollision(position, velocity, scene, lookAheadDista
 
   const intersects = raycaster.intersectObjects(scene.children, true);
   
-  const groundIntersects = intersects.filter(hit => 
-    hit.object.name && hit.object.name.includes('ground')
+  const collisionIntersects = intersects.filter(hit => 
+    hit.object.name && (hit.object.name.includes('ground') || hit.object.name.includes('wall') || hit.object.name.includes('barrier') || hit.object.name.includes('block'))
   );
 
-  if (groundIntersects.length === 0) {
+  if (collisionIntersects.length > 0) {
+    const hit = collisionIntersects[0];
+    return {
+      hit: true,
+      point: hit.point,
+      normal: hit.face ? hit.face.normal.clone() : direction.clone().negate(),
+      distance: hit.distance,
+      type: hit.object.name.includes('ground') ? 'track_surface' : 'wall'
+    };
+  }
+
+  if (collisionIntersects.length === 0) {
     const edgeCheckDistance = 1.5;
     const downDirection = new Vector3(0, -1, 0);
     const edgeCheckOrigin = new Vector3();
@@ -35,11 +46,11 @@ export function checkBoundaryCollision(position, velocity, scene, lookAheadDista
     raycaster.far = 5.0;
     
     const edgeIntersects = raycaster.intersectObjects(scene.children, true);
-    const groundAhead = edgeIntersects.filter(hit => 
-      hit.object.name && hit.object.name.includes('ground')
+    const collisionAhead = edgeIntersects.filter(hit => 
+      hit.object.name && (hit.object.name.includes('ground') || hit.object.name.includes('wall') || hit.object.name.includes('barrier') || hit.object.name.includes('block'))
     );
 
-    if (groundAhead.length === 0) {
+    if (collisionAhead.length === 0) {
       const hitPoint = new Vector3();
       hitPoint.copy(position).add(direction.clone().multiplyScalar(0.5));
       
@@ -82,10 +93,10 @@ export function getTrackBoundaries(scene) {
   const boundaries = [];
   
   scene.children.forEach(child => {
-    if (child.name && child.name.includes('ground')) {
+    if (child.name && (child.name.includes('ground') || child.name.includes('wall') || child.name.includes('barrier') || child.name.includes('block'))) {
       boundaries.push({
         mesh: child,
-        type: 'ground',
+        type: child.name.includes('ground') ? 'ground' : 'wall',
         name: child.name
       });
     }
@@ -107,12 +118,12 @@ export function isPositionOnTrack(position, scene, maxDistance = 3.0) {
   
   const intersects = raycaster.intersectObjects(scene.children, true);
   
-  const groundHits = intersects.filter(hit => 
-    hit.object.name && hit.object.name.includes('ground')
+  const collisionHits = intersects.filter(hit => 
+    hit.object.name && (hit.object.name.includes('ground') || hit.object.name.includes('wall') || hit.object.name.includes('barrier') || hit.object.name.includes('block'))
   );
   
-  if (groundHits.length > 0) {
-    const hit = groundHits[0];
+  if (collisionHits.length > 0) {
+    const hit = collisionHits[0];
     const distanceToGround = Math.abs(position.y - hit.point.y);
     return distanceToGround <= maxDistance;
   }

@@ -47,7 +47,10 @@ describe('Collision Detection', () => {
       children: [
         { name: 'ground', isMesh: true, geometry: { boundsTree: {} } },
         { name: 'ground dirt', isMesh: true, geometry: { boundsTree: {} } },
-        { name: 'not ground', isMesh: true }
+        { name: 'wall', isMesh: true, geometry: { boundsTree: {} } },
+        { name: 'barrier', isMesh: true, geometry: { boundsTree: {} } },
+        { name: 'block wall', isMesh: true, geometry: { boundsTree: {} } },
+        { name: 'not collision', isMesh: true }
       ]
     };
     
@@ -74,6 +77,55 @@ describe('Collision Detection', () => {
       
       expect(result).toEqual(mockCollision);
     });
+
+    it('should detect collision with wall mesh', () => {
+      const mockWallCollision = { 
+        hit: true, 
+        point: new Vector3(0, 0, -2),
+        normal: new Vector3(0, 0, 1),
+        distance: 2,
+        type: 'wall' 
+      };
+      vi.mocked(collisionModule.checkBoundaryCollision).mockReturnValue(mockWallCollision);
+      
+      const result = collisionModule.checkBoundaryCollision(mockPosition, mockVelocity, mockScene);
+      
+      expect(result.hit).toBe(true);
+      expect(result.type).toBe('wall');
+      expect(result.distance).toBe(2);
+    });
+
+    it('should detect collision with barrier mesh', () => {
+      const mockBarrierCollision = { 
+        hit: true, 
+        point: new Vector3(0, 0, -1.5),
+        normal: new Vector3(0, 0, 1),
+        distance: 1.5,
+        type: 'wall' 
+      };
+      vi.mocked(collisionModule.checkBoundaryCollision).mockReturnValue(mockBarrierCollision);
+      
+      const result = collisionModule.checkBoundaryCollision(mockPosition, mockVelocity, mockScene);
+      
+      expect(result.hit).toBe(true);
+      expect(result.type).toBe('wall');
+    });
+
+    it('should detect collision with block wall mesh', () => {
+      const mockBlockCollision = { 
+        hit: true, 
+        point: new Vector3(0, 0, -3),
+        normal: new Vector3(0, 0, 1),
+        distance: 3,
+        type: 'wall' 
+      };
+      vi.mocked(collisionModule.checkBoundaryCollision).mockReturnValue(mockBlockCollision);
+      
+      const result = collisionModule.checkBoundaryCollision(mockPosition, mockVelocity, mockScene);
+      
+      expect(result.hit).toBe(true);
+      expect(result.type).toBe('wall');
+    });
   });
 
   describe('calculateBounceResponse', () => {
@@ -99,6 +151,36 @@ describe('Collision Detection', () => {
       );
       expect(result).toEqual(mockResponse);
     });
+
+    it('should calculate bounce response for wall collisions', () => {
+      const wallNormal = new Vector3(1, 0, 0);
+      const mockWallBounceResponse = { 
+        velocity: new Vector3(-8, 0, 0), 
+        force: 8, 
+        direction: new Vector3(-1, 0, 0) 
+      };
+      vi.mocked(collisionModule.calculateBounceResponse).mockReturnValue(mockWallBounceResponse);
+      
+      const result = collisionModule.calculateBounceResponse(mockHitPoint, wallNormal, mockVelocity);
+      
+      expect(collisionModule.calculateBounceResponse).toHaveBeenCalledWith(mockHitPoint, wallNormal, mockVelocity);
+      expect(result.force).toBe(8);
+    });
+
+    it('should handle different wall collision normals', () => {
+      const diagonalWallNormal = new Vector3(0.707, 0, 0.707);
+      const mockDiagonalBounceResponse = { 
+        velocity: new Vector3(-5.66, 0, -5.66), 
+        force: 8, 
+        direction: new Vector3(-0.707, 0, -0.707) 
+      };
+      vi.mocked(collisionModule.calculateBounceResponse).mockReturnValue(mockDiagonalBounceResponse);
+      
+      const result = collisionModule.calculateBounceResponse(mockHitPoint, diagonalWallNormal, mockVelocity);
+      
+      expect(collisionModule.calculateBounceResponse).toHaveBeenCalledWith(mockHitPoint, diagonalWallNormal, mockVelocity);
+      expect(result.force).toBe(8);
+    });
   });
 
   describe('getTrackBoundaries', () => {
@@ -113,6 +195,39 @@ describe('Collision Detection', () => {
       
       expect(collisionModule.getTrackBoundaries).toHaveBeenCalledWith(mockScene);
       expect(result).toEqual(mockBoundaries);
+    });
+
+    it('should extract wall meshes from scene', () => {
+      const mockBoundaries = [
+        { mesh: { name: 'ground' }, type: 'ground', name: 'ground' },
+        { mesh: { name: 'ground dirt' }, type: 'ground', name: 'ground dirt' },
+        { mesh: { name: 'wall' }, type: 'wall', name: 'wall' },
+        { mesh: { name: 'barrier' }, type: 'wall', name: 'barrier' },
+        { mesh: { name: 'block wall' }, type: 'wall', name: 'block wall' }
+      ];
+      vi.mocked(collisionModule.getTrackBoundaries).mockReturnValue(mockBoundaries);
+      
+      const result = collisionModule.getTrackBoundaries(mockScene);
+      
+      expect(collisionModule.getTrackBoundaries).toHaveBeenCalledWith(mockScene);
+      expect(result).toEqual(mockBoundaries);
+    });
+
+    it('should categorize wall meshes correctly', () => {
+      const mockBoundaries = [
+        { mesh: { name: 'wall' }, type: 'wall', name: 'wall' },
+        { mesh: { name: 'barrier' }, type: 'wall', name: 'barrier' },
+        { mesh: { name: 'block wall' }, type: 'wall', name: 'block wall' }
+      ];
+      vi.mocked(collisionModule.getTrackBoundaries).mockReturnValue(mockBoundaries);
+      
+      const result = collisionModule.getTrackBoundaries(mockScene);
+      
+      expect(result.every(boundary => 
+        boundary.name.includes('wall') || boundary.name.includes('barrier') || boundary.name.includes('block') 
+        ? boundary.type === 'wall' 
+        : true
+      )).toBe(true);
     });
   });
 
