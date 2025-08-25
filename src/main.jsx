@@ -4,10 +4,12 @@ import './index.css'
 import { WebGPUCanvas } from './WebGPUCanvas.jsx'
 import { MobileControls } from './mobile/MobileControls.jsx'
 import { LoadingScreen } from './LoadingScreen.jsx'
+import { Header } from './components/Header.jsx'
 
 createRoot(document.getElementById('root')).render(
 
     <div className='canvas-container'>
+      <Header />
       <MobileControls/>
       <Suspense fallback={false}>
       <WebGPUCanvas />
